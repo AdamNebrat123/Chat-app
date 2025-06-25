@@ -29,7 +29,6 @@ namespace TcpClientApp
         }
         private void InputHandler()
         {
-            // NEED TO ADD FUNCTIONALITY FOR DIFFENT STRATEGIES!
                 SwitchMsgType();
 
             while (true)

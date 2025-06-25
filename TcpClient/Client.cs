@@ -20,6 +20,7 @@ namespace TcpClientApp
     {
         private static Connector _connector;
         private static ClientInputHandler _clientInputHandler;
+        private static ClientReaderHandler _clientReaderHandler;
         private static TcpClient _client;
         private static string toWho;
         private static string nickName;
@@ -46,13 +47,12 @@ namespace TcpClientApp
             _reader = new MsgReader(_client);
 
             Console.WriteLine("Whats your name?");
-            string name = Console.ReadLine();
-            //SendName(name);
+            nickName = Console.ReadLine();
 
-            _clientInputHandler = ClientInputHandler.CreateInstance(name, _writer);
+            _clientInputHandler = ClientInputHandler.CreateInstance(nickName, _writer);
             _clientInputHandler.StartInputHandler();
-
-
+            _clientReaderHandler = new ClientReaderHandler(_client);
+            _clientReaderHandler.StartReaderHandler(nickName);
 
 
         }

@@ -70,10 +70,10 @@ namespace Adam_s_TcpServer
                 ((InterfaceHandler)myObject).CorrectOperationHandler("server");
 
 
-                }
             }
-            private void StartConversation( TcpClient client)
-            {
+        }
+        private void StartConversation( TcpClient client)
+        {
             try
             {
                 //create the intput thread and the reading thread
