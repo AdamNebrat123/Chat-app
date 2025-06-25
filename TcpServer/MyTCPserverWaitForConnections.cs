@@ -17,7 +17,6 @@ namespace Adam_s_TcpServer
 {
     public class MyTCPserverWaitForConnections
     {
-        
         public static void Main()
         {
             CreateTheLogger();
@@ -33,8 +32,7 @@ namespace Adam_s_TcpServer
 
             // Start listening for client requests.
             server.Start();
-            new Thread(() => InputHandler(dictionaryOfmessageQueue)).Start();
-            new Thread(() => SearchingForException(dictionaryOfmessageQueue, exceptionQueue)).Start();
+            //////////////////////////
             while (true)
             {
                 Log.Information("Waiting for a connection... ");
@@ -47,7 +45,7 @@ namespace Adam_s_TcpServer
                 numOfClients++;
                 BlockingCollection<string> queue = new BlockingCollection<string>();
                 dictionaryOfmessageQueue.Add(numOfClients, queue);
-                Thread createConversationThread = new Thread(() => new MyTcpListener(queue, client, numOfClients, exceptionQueue));
+                Thread createConversationThread = new Thread(() => new MyTCPserverConversation(queue, client, numOfClients, exceptionQueue));
                 createConversationThread.Start();
 
                 

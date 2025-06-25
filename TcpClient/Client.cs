@@ -9,23 +9,58 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
-
+using myClass;
 
 using myClass;
 using System.Xml.Linq;
 
 namespace TcpClientApp
 {
-    public class MyTcpClient
+    public class Client
     {
-        static BlockingCollection<string> messageQueue = new BlockingCollection<string>();
-        private static TcpClient client;
-        private static NetworkStream stream;
+        private static Connector _connector;
+        private static ClientInputHandler _clientInputHandler;
+        private static BlockingCollection<string> messageQueue = new BlockingCollection<string>();
+        private static TcpClient _client;
+        private static string toWho;
+        private static ReadAndWrite msgStrategy; // what to send (SimpleStringMsg, Image , Student, Family...)
+        private static string nickName;
+
+        private static MsgWriter _writer;
+        private static MsgReader _reader;
+
 
         public static void Main()
         {
             CreateTheLogger();
-            Connect("192.168.1.29");
+
+
+            String serverIP = "192.168.1.29";
+            Int32 port = 13000;
+            _connector = new Connector(serverIP, port);
+            _client = _connector.Connect();
+            if (_client == null)
+            {
+                Console.WriteLine("could NOT connect to the server");
+                return;
+            }
+            _writer = new MsgWriter(_client);
+            _reader = new MsgReader(_client);
+
+            Console.WriteLine("Whats your name?");
+            string name = Console.ReadLine();
+            SendName(name);
+
+            
+        }
+        public static void SendName(string name)
+        {
+            ReadAndWrite sendName = new SendMyName(name);
+            _writer.SetMsgSendStrategy(sendName);
+            _writer.SendData();
+            ReadAndWrite simpleStringMsg = new SimpleStringMsg();
+            _writer.SetMsgSendStrategy(simpleStringMsg);
+
         }
         static void Connect(String server)
         {
@@ -33,13 +68,12 @@ namespace TcpClientApp
             try
             {
                 // Create a TcpClient.
-                // Note, for this client to work you need to have a TcpServer
+                // Note, for this _client to work you need to have a TcpServer
                 // connected to the same address as specified by the server, port
                 // combination.
-                Int32 port = 13000;
+                
 
-                // Prefer a using declaration to ensure the instance is Disposed later.
-                client = new TcpClient(server, port);   
+                // Prefer a using declaration to ensure the instance is Disposed later. 
 
 
                 string messageStr = string.Empty;
@@ -47,19 +81,27 @@ namespace TcpClientApp
                 //create the intput thread and the reading thread
 
 
-                //**************************************************Thread inputThread = new Thread(InputHandler);*****************************
+                //**************************************************Thread inputThread = new Thread(ClientInputHandler);*****************************
 
 
-                Thread readingThread = new Thread(ReadTheIncomingData);
+                //Thread readingThread = new Thread(ReadTheIncomingData);
 
                 //run the input thread
 
-                //**************************************************inputThread.Start()*****************************;
+                //**************************************************inputThread.Start()****************************;
 
                 //run the Reading thread
-                readingThread.Start();
+                //readingThread.Start();
 
+
+
+                Console.WriteLine("Hello! how do you want to be called?");
+                nickName = Console.ReadLine();
+                Log.Information("Welcome to adams's chat **{0}**, you can enter messages (type 'exit' to quit): ", name);
                 ReadAndWrite obj = null;
+
+
+
                 for (int j = 3; j < 4; j++)
                 {
                     if (j == 1)
@@ -128,14 +170,14 @@ namespace TcpClientApp
 
 
 
-                //writing a msg to the stream
+                //writing a msg to the _stream
 
                 // Loop to send the msg that we got from the input thread while thre is a connection.
                 //while (true)
                 //{
-                //    // Get a stream object for reading and writing
+                //    // Get a _stream object for reading and writing
 
-                //    stream = client.GetStream();
+                //    _stream = _client.GetStream();
 
 
                 //    if (messageQueue.TryTake(out string message))
@@ -145,12 +187,12 @@ namespace TcpClientApp
                 //        Byte[] messageBytes = System.Text.Encoding.ASCII.GetBytes(messageStr);
 
                 //        // Send the message to the connected TcpServer.
-                //        stream.Write(messageBytes, 0, messageBytes.Length);
+                //        _stream.Write(messageBytes, 0, messageBytes.Length);
 
                 //        // Explicit close is not necessary since TcpClient.Dispose() will be
                 //        // called automatically.
-                //        // stream.Close();
-                //        // client.Close();
+                //        // _stream.Close();
+                //        // _client.Close();
                 //    }
 
 
@@ -177,64 +219,44 @@ namespace TcpClientApp
             .WriteTo.File("ClientChatLog.txt", rollingInterval: RollingInterval.Infinite, shared: true)
             .CreateLogger();
         }
-        private static void InputHandler()
-        {
-            Console.WriteLine("Hello! how do you want to be called?");
-            string name = Console.ReadLine();
-            Log.Information("Welcome to adams's chat **{0}**, you can enter messages (type 'exit' to quit): ", name);
-            while (true)
-            {
-                // Wait for user input
-                string input = Console.ReadLine();
-                Log.Information(string.Format("from {0} : {1}", name, input));
+        
+        //private static void ReadTheIncomingData()
+        //{
+        //    try
+        //    {
+        //        while (true)
+        //        {
+        //            // array to store the response bytes.
+        //            Byte[] messageBytesRecieved = new Byte[256];
 
-                // Add the input to the queue
-                messageQueue.Add(string.Format("from {0} : {1}" , name, input));
+        //            // String to store the response ASCII representation.
+        //            string responseData;
+        //            int i;
+        //            NetworkStream ns = _client.GetStream();
+        //            // Loop to receive all the data sent by the _client.
+        //            responseData = String.Empty;
+        //            while ((i = ns.Read(messageBytesRecieved, 0, messageBytesRecieved.Length)) != 0)
+        //            {
+        //                // Read the first batch of the TcpServer response bytes.
+        //                responseData = System.Text.Encoding.ASCII.GetString(messageBytesRecieved, 0, i);
+        //                Log.Information(responseData);
 
-                // Exit the loop if the user types "exit"
-                if (input.ToLower() == "exit")
-                {
-                    break;
-                }
-            }
-        }
-        private static void ReadTheIncomingData()
-        {
-            try
-            {
-                while (true)
-                {
-                    // array to store the response bytes.
-                    Byte[] messageBytesRecieved = new Byte[256];
+        //            }
 
-                    // String to store the response ASCII representation.
-                    string responseData;
-                    int i;
-                    NetworkStream ns = client.GetStream();
-                    // Loop to receive all the data sent by the client.
-                    responseData = String.Empty;
-                    while ((i = ns.Read(messageBytesRecieved, 0, messageBytesRecieved.Length)) != 0)
-                    {
-                        // Read the first batch of the TcpServer response bytes.
-                        responseData = System.Text.Encoding.ASCII.GetString(messageBytesRecieved, 0, i);
-                        Log.Information(responseData);
-
-                    }
-
-                }
-            }
-            catch (ArgumentNullException e)
-            {
-                Console.WriteLine("ArgumentNullException: {0}", e);
-            }
-            catch (SocketException e)
-            {
-                Console.WriteLine("SocketException: {0}", e);
-            }
-            catch (Exception e)
-            {
-                Log.Information("Disconected from the server");
-            }
-        }
+        //        }
+        //    }
+        //    catch (ArgumentNullException e)
+        //    {
+        //        Console.WriteLine("ArgumentNullException: {0}", e);
+        //    }
+        //    catch (SocketException e)
+        //    {
+        //        Console.WriteLine("SocketException: {0}", e);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Log.Information("Disconected from the server");
+        //    }
+        //}
     }
 }

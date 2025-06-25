@@ -16,14 +16,14 @@ using System.Xml.Linq;
 using myClass;
 namespace Adam_s_TcpServer
 {
-    public class MyTcpListener
+    public class MyTCPserverConversation
     {
         private BlockingCollection<string> messageQueue;
         private BlockingCollection<int> exceptionQueue;
 
         private NetworkStream stream;
         private int numOfClient;
-        public MyTcpListener(BlockingCollection<string> messageQueue, TcpClient client, int numOfClient, BlockingCollection<int> ExceptionQueue)
+        public MyTCPserverConversation(BlockingCollection<string> messageQueue, TcpClient client, int numOfClient, BlockingCollection<int> ExceptionQueue)
         {
             this.exceptionQueue = ExceptionQueue;
             this.numOfClient = numOfClient;
@@ -149,10 +149,12 @@ namespace Adam_s_TcpServer
             catch (ArgumentNullException e)
             {
                 Console.WriteLine("ArgumentNullException: {0}", e);
+                exceptionQueue.Add(numOfClient);
             }
             catch (SocketException e)
             {
                 Console.WriteLine("SocketException: {0}", e);
+                exceptionQueue.Add(numOfClient);
             }
 
             catch (Exception e)
