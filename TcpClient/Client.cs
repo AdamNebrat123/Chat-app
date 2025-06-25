@@ -20,10 +20,8 @@ namespace TcpClientApp
     {
         private static Connector _connector;
         private static ClientInputHandler _clientInputHandler;
-        private static BlockingCollection<string> messageQueue = new BlockingCollection<string>();
         private static TcpClient _client;
         private static string toWho;
-        private static ReadAndWrite msgStrategy; // what to send (SimpleStringMsg, Image , Student, Family...)
         private static string nickName;
 
         private static MsgWriter _writer;
@@ -35,7 +33,7 @@ namespace TcpClientApp
             CreateTheLogger();
 
 
-            String serverIP = "192.168.1.29";
+            String serverIP = "127.0.0.1";
             Int32 port = 13000;
             _connector = new Connector(serverIP, port);
             _client = _connector.Connect();
@@ -49,19 +47,24 @@ namespace TcpClientApp
 
             Console.WriteLine("Whats your name?");
             string name = Console.ReadLine();
-            SendName(name);
+            //SendName(name);
 
-            
-        }
-        public static void SendName(string name)
-        {
-            ReadAndWrite sendName = new SendMyName(name);
-            _writer.SetMsgSendStrategy(sendName);
-            _writer.SendData();
-            ReadAndWrite simpleStringMsg = new SimpleStringMsg();
-            _writer.SetMsgSendStrategy(simpleStringMsg);
+            _clientInputHandler = ClientInputHandler.CreateInstance(name, _writer);
+            _clientInputHandler.StartInputHandler();
+
+
+
 
         }
+        //public static void SendName(string name)
+        //{
+        //    ICreateMsg sendName = new SendMyName(name);
+        //    _writer.SetMsgSendStrategy(sendName);
+        //    _writer.SendData();
+        //    ReadAndWrite simpleStringMsg = new SimpleStringMsg();
+        //    _writer.SetMsgSendStrategy(simpleStringMsg);
+
+        //}
         static void Connect(String server)
         {
 
@@ -95,69 +98,69 @@ namespace TcpClientApp
 
 
 
-                Console.WriteLine("Hello! how do you want to be called?");
-                nickName = Console.ReadLine();
-                Log.Information("Welcome to adams's chat **{0}**, you can enter messages (type 'exit' to quit): ", name);
-                ReadAndWrite obj = null;
+                //Console.WriteLine("Hello! how do you want to be called?");
+                //nickName = Console.ReadLine();
+                //Log.Information("Welcome to adams's chat **{0}**, you can enter messages (type 'exit' to quit): ", name);
+                //ReadAndWrite obj = null;
 
 
 
-                for (int j = 3; j < 4; j++)
-                {
-                    if (j == 1)
-                    {
-                        Console.WriteLine("enter a name: ");
-                        string name = Console.ReadLine();
-                        Console.WriteLine("enter an age: ");
-                        int age = int.Parse(Console.ReadLine());
-                        obj = new Student(name, age);
-                    }
-                    else if (j == 2) 
-                    {
-                        Console.WriteLine("enter father's name: ");
-                        string father = Console.ReadLine();
-                        Console.WriteLine("enter mother's name: ");
-                        string mother = Console.ReadLine();
-                        obj = new Family(father, mother);
-                    }
-                    else
-                    {
-                        bool flag = true;
-                        while (flag)
-                        {
-                            Console.WriteLine("enter a path to an img file: ");
-                            string imgPath = Console.ReadLine();
-                            try
-                            {
-                                // Read the image file as a byte array
-                                byte[] imgBytes = File.ReadAllBytes(imgPath);
+                //for (int j = 3; j < 4; j++)
+                //{
+                //    if (j == 1)
+                //    {
+                //        Console.WriteLine("enter a name: ");
+                //        string name = Console.ReadLine();
+                //        Console.WriteLine("enter an age: ");
+                //        int age = int.Parse(Console.ReadLine());
+                //        obj = new Student(name, age);
+                //    }
+                //    else if (j == 2) 
+                //    {
+                //        Console.WriteLine("enter father's name: ");
+                //        string father = Console.ReadLine();
+                //        Console.WriteLine("enter mother's name: ");
+                //        string mother = Console.ReadLine();
+                //        obj = new Family(father, mother);
+                //    }
+                //    else
+                //    {
+                //        bool flag = true;
+                //        while (flag)
+                //        {
+                //            Console.WriteLine("enter a path to an img file: ");
+                //            string imgPath = Console.ReadLine();
+                //            try
+                //            {
+                //                // Read the image file as a byte array
+                //                byte[] imgBytes = File.ReadAllBytes(imgPath);
 
-                                string imgName = Path.GetFileName(imgPath);
-                                obj = new Image(imgBytes, imgName);
-                                flag = false;
-                            }
-                            catch (Exception e)
-                            {
-                                Log.Error("An error occurred: " + e.Message);
-                            }
-                        }
-                    }
-                    for (int i = 0; i < 5; i++)
-                    {
-                        Console.WriteLine(i);
-                        Thread.Sleep(1000);
-                    }
+                //                string imgName = Path.GetFileName(imgPath);
+                //                obj = new Image(imgBytes, imgName);
+                //                flag = false;
+                //            }
+                //            catch (Exception e)
+                //            {
+                //                Log.Error("An error occurred: " + e.Message);
+                //            }
+                //        }
+                //    }
+                //    for (int i = 0; i < 5; i++)
+                //    {
+                //        Console.WriteLine(i);
+                //        Thread.Sleep(1000);
+                //    }
 
-                    stream = client.GetStream();
+                //    stream = client.GetStream();
 
 
-                    //serialize 
-                    byte[] data = obj.Write();
+                //    //serialize 
+                //    byte[] data = obj.Write();
 
-                    stream.Write(BitConverter.GetBytes(data.Length), 0, sizeof(int)); //send the number of bytes that need to be transfered
-                    stream.Write(data, 0, data.Length); //send the object itself
-                    Console.WriteLine(string.Join(", ", data));
-                    }
+                //    stream.Write(BitConverter.GetBytes(data.Length), 0, sizeof(int)); //send the number of bytes that need to be transfered
+                //    stream.Write(data, 0, data.Length); //send the object itself
+                //    Console.WriteLine(string.Join(", ", data));
+                //    }
                 
 
 

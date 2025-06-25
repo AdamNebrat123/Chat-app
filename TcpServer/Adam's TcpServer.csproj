@@ -33,8 +33,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="myClass">
-      <HintPath>..\myClass\bin\Debug\myClass.dll</HintPath>
+    <Reference Include="myClass, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Users\User\source\repos\myClass\bin\Debug\myClass.dll</HintPath>
     </Reference>
     <Reference Include="Serilog, Version=4.2.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
       <HintPath>packages\Serilog.4.2.0\lib\net471\Serilog.dll</HintPath>

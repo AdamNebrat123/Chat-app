@@ -25,7 +25,7 @@ namespace Adam_s_TcpServer
             Dictionary<int, BlockingCollection<string>> dictionaryOfmessageQueue = new Dictionary<int, BlockingCollection<string>>();
             // Set the TcpListener on port 13000.
             Int32 port = 13000;
-            IPAddress localAddr = IPAddress.Parse("192.168.1.29");
+            IPAddress localAddr = IPAddress.Parse("127.0.0.1");
 
             // TcpListener server = new TcpListener(port);
             TcpListener server = new TcpListener(localAddr, port);

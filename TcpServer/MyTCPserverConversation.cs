@@ -62,12 +62,12 @@ namespace Adam_s_TcpServer
                 {
                     idBuffer[i] = fullObjectBytes[i];
                 }
-                Console.WriteLine("the buffer: " + string.Join(",", fullObjectBytes));
+                //Console.WriteLine("the buffer: " + string.Join(",", fullObjectBytes));
                 int id = BitConverter.ToInt32(idBuffer, 0); // the ID of the class
-                Console.WriteLine(id );
+                //Console.WriteLine(id );
                 ReadAndWrite myObject = DeserializationHelper.CreateObjectById(id);
                 myObject.Read(fullObjectBytes);
-                ((InterfaceHandler)myObject).CorrectOperationHandler();
+                ((InterfaceHandler)myObject).CorrectOperationHandler("server");
 
 
                 }

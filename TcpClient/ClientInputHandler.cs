@@ -1,8 +1,10 @@
-﻿using Serilog;
+﻿using myClass;
+using Serilog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,13 +16,12 @@ namespace TcpClientApp
     {
         private static object locker = new object();
         private static ClientInputHandler _instance;
-        private BlockingCollection<string> msgQueue;
         private string nickName;
-        private MsgWriter _sender;
-        private ClientInputHandler(BlockingCollection<string> msgQueue, string nickName)
+        private MsgWriter _writer;
+        private ClientInputHandler(string nickName, MsgWriter writer)
         {
-            this.msgQueue = msgQueue;
             this.nickName = nickName;
+            _writer = writer;
         }
         public void StartInputHandler()
         {
@@ -29,22 +30,22 @@ namespace TcpClientApp
         private void InputHandler()
         {
             // NEED TO ADD FUNCTIONALITY FOR DIFFENT STRATEGIES!
+                SwitchMsgType();
+
             while (true)
             {
-                // Wait for user input
-                string input = Console.ReadLine();
-                Log.Information(string.Format("from {0} : {1}", nickName, input));
-
-                // Add the input to the queue
-                msgQueue.Add(input);
-                // Exit the loop if the user types "exit"
-                if (input.ToLower() == "exit")
+                ReadAndWrite msgObj = _writer.CreateMsgObj();
+                if (msgObj != null)
                 {
-                    break;
+                    _writer.SendData(msgObj);
+                }
+                else
+                {
+                    SwitchMsgType();
                 }
             }
         }
-        public static ClientInputHandler CreateInstance(BlockingCollection<string> msgQueue, string nickName)
+        public static ClientInputHandler CreateInstance(string nickName, MsgWriter writer)
         {
             // pattern to prevent race conidion between threads that are trying to create the class at the first time:
             // double check _instance == null to prevent the race condition
@@ -54,11 +55,18 @@ namespace TcpClientApp
                 {
                     if (_instance == null)
                     {
-                        _instance = new ClientInputHandler(msgQueue, nickName);
+                        _instance = new ClientInputHandler(nickName, writer);
                     }
                 }
             }
             return _instance;
+        }
+
+        private void SwitchMsgType()
+        {
+            ICreateMsg typeOfMsg = SwitchMsgManager.GetCorrectTypeOfMsg();
+            _writer.SetMsgSendStrategy(typeOfMsg);
+
         }
     }
 }
