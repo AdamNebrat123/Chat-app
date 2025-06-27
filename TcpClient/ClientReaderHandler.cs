@@ -17,15 +17,17 @@ namespace TcpClientApp
         {
             _reader = new MsgReader(client);
         }
-        public void StartReaderHandler(string nickname)
+        public void StartReaderHandler()
         {
-            new Thread(() => ReaderHandler(nickname)).Start();
+            new Thread(() => ReaderHandler()).Start();
         }
-        private void ReaderHandler(string nickname)
+        private void ReaderHandler()
         {
             while (true)
             {
-                _reader.Read(nickname);
+                ReadAndWrite readObj = _reader.Read();
+                Console.WriteLine(); // go down a line
+                Log.Information(readObj.ToString());
             }
         }
     }

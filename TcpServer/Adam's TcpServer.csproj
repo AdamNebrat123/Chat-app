@@ -78,11 +78,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DstOfMsgManager.cs" />
+    <Compile Include="ClientNameToGroupName.cs" />
     <Compile Include="ExceptionHandler.cs" />
-    <Compile Include="GroupOfClientManager.cs" />
+    <Compile Include="GroupsOfClientsDictionary.cs" />
     <Compile Include="ConversationsManager.cs" />
-    <Compile Include="NameToClientManager.cs" />
+    <Compile Include="ClientNameToTcpClientDictionary.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MyTCPserverConversation.cs" />
     <Compile Include="MyTCPserverWaitForConnections.cs" />

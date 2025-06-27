@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Adam_s_TcpServer
 {
-    public class DstOfMsgManager
+    public class ClientNameToGroupName
     {
         private readonly ConcurrentDictionary<string, string> _senderToGroup
             = new ConcurrentDictionary<string, string>();
@@ -26,6 +26,14 @@ namespace Adam_s_TcpServer
         public bool TryRemoveSender(string sender)
         {
             return _senderToGroup.TryRemove(sender, out _);
+        }
+        public bool TryUpdateGroupForSender(string sender, string newGroupName)
+        {
+            if (_senderToGroup.TryGetValue(sender, out var currentGroupName))
+            {
+                return _senderToGroup.TryUpdate(sender, newGroupName, currentGroupName);
+            }
+            return false;
         }
     }
 }

@@ -8,13 +8,13 @@ using System.Threading.Tasks;
 
 namespace Adam_s_TcpServer
 {
-    public class GroupOfClientManager
+    public class GroupsOfClientsDictionary
     {
         private readonly ConcurrentDictionary<string, ConcurrentBag<TcpClient>> _groups
             = new ConcurrentDictionary<string, ConcurrentBag<TcpClient>>();
-        private NameToClientManager _nameToClientManager;
+        private ClientNameToTcpClientDictionary _nameToClientManager;
 
-        public GroupOfClientManager(NameToClientManager nameToClientManager)
+        public GroupsOfClientsDictionary(ClientNameToTcpClientDictionary nameToClientManager)
         {
             _nameToClientManager = nameToClientManager;
         }

@@ -53,6 +53,7 @@ namespace TcpClientApp
                 if (msgObj != null)
                 {
                     _writer.SendData(msgObj);
+                    Thread.Sleep(50);
                 }
                 else
                 {

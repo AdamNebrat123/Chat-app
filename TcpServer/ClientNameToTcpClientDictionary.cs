@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Adam_s_TcpServer
 {
-    public class NameToClientManager
+    public class ClientNameToTcpClientDictionary
     {
         private readonly ConcurrentDictionary<string, TcpClient> _nameToClient
             = new ConcurrentDictionary<string, TcpClient>();

@@ -23,9 +23,9 @@ namespace Adam_s_TcpServer
             int numOfClients = 0;
             BlockingCollection<int> exceptionQueue = new BlockingCollection<int>();
             Dictionary<int, BlockingCollection<string>> dictionaryOfmessageQueue = new Dictionary<int, BlockingCollection<string>>();
-            DstOfMsgManager dstOfMsgManager = new DstOfMsgManager();
-            NameToClientManager nameToClientManager = new NameToClientManager();
-            GroupOfClientManager groupOfClientManager = new GroupOfClientManager(nameToClientManager);
+            ClientNameToGroupName dstOfMsgManager = new ClientNameToGroupName();
+            ClientNameToTcpClientDictionary nameToClientManager = new ClientNameToTcpClientDictionary();
+            GroupsOfClientsDictionary groupOfClientManager = new GroupsOfClientsDictionary(nameToClientManager);
 
 
             // Set the TcpListener on port 13000.
@@ -50,7 +50,7 @@ namespace Adam_s_TcpServer
                 numOfClients++;
                 MyTCPserverConversation conversation = new MyTCPserverConversation(groupOfClientManager, dstOfMsgManager,
                                                                 nameToClientManager, client, numOfClients, exceptionQueue);
-                conversation.StartReadAndSend("server");
+                conversation.StartReadAndSend();
             }
         }
         public static void CreateTheLogger()

@@ -49,7 +49,7 @@ namespace TcpClientApp
             _clientInputHandler = ClientInputHandler.CreateInstance(_writer);
             _clientInputHandler.StartInputHandler();
             _clientReaderHandler = new ClientReaderHandler(_client);
-            _clientReaderHandler.StartReaderHandler(nickName);
+            _clientReaderHandler.StartReaderHandler();
 
 
         }
