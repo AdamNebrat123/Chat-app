@@ -14,153 +14,210 @@ using System.Xml.Linq;
 
 
 using myClass;
+using TcpClientApp;
+using System.Runtime.Remoting.Messaging;
 namespace Adam_s_TcpServer
 {
     public class MyTCPserverConversation
     {
-        private BlockingCollection<string> messageQueue;
-        private BlockingCollection<int> exceptionQueue;
-
-        private NetworkStream stream;
-        private int numOfClient;
-        public MyTCPserverConversation(BlockingCollection<string> messageQueue, TcpClient client, int numOfClient, BlockingCollection<int> ExceptionQueue)
+        private GroupOfClientManager _groupOfClientManager;
+        private DstOfMsgManager _dstOfMsgManager;
+        private NameToClientManager _nameToClientManager;
+        private NetworkStream _stream;
+        private readonly BlockingCollection<int> _exceptionQueue;
+        private MsgWriter _writer;
+        private readonly MsgReader _reader;
+        private string _nickName;
+        private int _numOfClient;
+        private readonly TcpClient _theClientConnectedTo;
+        public MyTCPserverConversation(GroupOfClientManager groupOfClientManager, DstOfMsgManager dstOfMsgManager,
+            NameToClientManager nameToClientManager, TcpClient client,
+            int numOfClient, BlockingCollection<int> ExceptionQueue)
         {
-            this.exceptionQueue = ExceptionQueue;
-            this.numOfClient = numOfClient;
-            this.messageQueue = messageQueue;
+            this._exceptionQueue = ExceptionQueue;
+            this._numOfClient = numOfClient;
+            this._groupOfClientManager = groupOfClientManager;
+            this._nameToClientManager = nameToClientManager;
+            this._theClientConnectedTo = client;
+            this._dstOfMsgManager = dstOfMsgManager;
+            this._reader = new MsgReader(_theClientConnectedTo);
+            this._writer = new MsgWriter(_theClientConnectedTo);
+        }
 
-            //StartConversation(client);
+        //// Tries to register a client with the given nickname and TcpClient instance.
+        //// Returns true if registration is successful; otherwise, sends an error message and returns false.
+        //private bool TryRegisterClient(string nickname, TcpClient client)
+        //{
+        //    // Check if a group already exists with the same name as the nickname
+        //    if (_groupOfClientManager.ContainsGroup(nickname))
+        //    {
+        //        SendError("The name is already used. Please pick a different name.");
+        //        return false;
+        //    }
 
-            //Object DeSerialization
+        //    // Try to add the nickname and TcpClient to the name-to-client dictionary
+        //    if (!_nameToClientManager.TryAdd(nickname, client))
+        //    {
+        //        SendError("The name is already used. Please pick a different name.");
+        //        return false;
+        //    }
+
+        //    // Verify that the client was actually added and can be retrieved
+        //    var clientToTalkTo = _nameToClientManager.GetClientOrNull(nickname);
+        //    if (clientToTalkTo == null)
+        //    {
+        //        SendError("No such client, please enter a different name.");
+        //        return false;
+        //    }
+
+        //    // Add the TcpClient to the group corresponding to the nickname
+        //    _groupOfClientManager.TryAddClientToGroup(nickname, client);
+
+        //    // Register the sender's destination group as their own group (for message routing)
+        //    _dstOfMsgManager.TryAddSenderGroup(nickname, nickname);
+
+        //    return true;
+        //}
+
+        //// Sends an error message back to the connected client
+        //private void SendError(string message)
+        //{
+        //    var response = new ServerMsg(message);
+        //    _writer.SetClient(_theClientConnectedTo);
+        //    _writer.SendData(response);
+        //}
+
+        //// Continuously tries to read a nickname from the client and register them.
+        //// Keeps looping until a valid registration happens.
+        //private void AddToNameToClientManagerDict(string nickname)
+        //{
+        //    while (true)
+        //    {
+        //        try
+        //        {
+        //            // Read data from the client; nickname parameter is ignored internally but kept for signature consistency
+        //            ReadAndWrite readObj = _reader.Read(nickname);
+        //            _nickName = ((SendMyName)readObj).GetNickName();
+
+        //            // Attempt to register the client with the extracted nickname
+        //            if (TryRegisterClient(_nickName, _theClientConnectedTo))
+        //                return;  // Registration succeeded; exit the loop
+        //        }
+        //        catch (Exception)
+        //        {
+        //            // If reading fails (e.g., client didn't send a name), notify client to enter their name first
+        //            SendError("You must enter your name first.");
+        //        }
+        //    }
+        //}
+        //public bool UnregisterClient(string clientName)
+        //{
+        //    // 1. Retrieve the TcpClient object for the client name (if exists)
+        //    TcpClient client = _nameToClientManager.GetClientOrNull(clientName);
+        //    if (client == null)
+        //        return false; // Client not registered
+
+        //    // 2. Remove the client from the main name-to-client dictionary
+        //    if (!_nameToClientManager.TryRemove(clientName))
+        //    {
+        //        // Optional: log or handle unexpected failure here
+        //    }
+
+        //    // 3. Remove the client from their private group (if it exists)
+        //    if (_groupOfClientManager.ContainsGroup(clientName))
+        //    {
+        //        _groupOfClientManager.TryRemoveClientFromGroup(clientName, clientName); // Remove client by name
+        //        _groupOfClientManager.TryRemoveGroup(clientName, out _); // Remove the private group itself
+        //    }
+
+        //    // 4. Remove the client from any other groups they might be part of
+        //    foreach (string groupName in _groupOfClientManager.GetAllGroupNames())
+        //    {
+        //        _groupOfClientManager.TryRemoveClientFromGroup(groupName, clientName);
+        //    }
+
+        //    // 5. Remove the client’s destination mapping (where their messages are sent)
+        //    _dstOfMsgManager.TryRemoveSender(clientName);
+
+        //    return true;
+        //}
+
+        private void AddToNameToClientManagerDict(string nickname)
+        {
+            while (true)
+            {
+                try
+                {
+                    ReadAndWrite readObj = _reader.Read(nickname); // read data
+                    _nickName = ((SendMyName)readObj).GetNickName();
+                    if (_nameToClientManager.TryAdd(_nickName, _theClientConnectedTo))
+                    {
+                        if (_groupOfClientManager.TryCreateGroup(_nickName))
+                        {
+                            TcpClient clientToTalkTo = _nameToClientManager.GetClientOrNull(_nickName); // name needs to be a name of a client i 
+                                                                                                        // want to to talk to but for now lets make me
+                            if (clientToTalkTo != null)
+                            {
+                                _groupOfClientManager.TryAddClientToGroup(_nickName, _theClientConnectedTo);
+                                _dstOfMsgManager.TryAddSenderGroup(_nickName, _nickName);
+                                return;
+
+                            }
+                            else
+                            {
+                                // send no such client, pls enter other client name
+                                ReadAndWrite response = new ServerMsg("no such client, pls enter other client name");
+                                this._writer.SetClient(_theClientConnectedTo);
+                                _writer.SendData(response); // send data
+                            }
+                        }
+                        else
+                        {
+                            ReadAndWrite response = new ServerMsg("Group name is already exist. pick other name");
+                            this._writer.SetClient(_theClientConnectedTo);
+                            _writer.SendData(response); // send data
+                        }
+                    }
+                    else
+                    {
+                        ReadAndWrite response = new ServerMsg("the name is already exist. pick other name");
+                        this._writer.SetClient(_theClientConnectedTo);
+                        _writer.SendData(response); // send data
+                    }
+                }
+                catch (Exception e)
+                {
+                    ReadAndWrite response = new ServerMsg("You must enter your name first.");
+                    this._writer.SetClient(_theClientConnectedTo);
+                    _writer.SendData(response); // send data
+                }
+            }
+        }
+        public void StartReadAndSend(string nickname)
+        {
+            new Thread(() => ReadAndSend(nickname)).Start();
+        }
+        private void ReadAndSend(string nickname)
+        {
+            // after the client connection adds *SUCCESSFULLY* himself to the dictionaries,
+            // only then we can can messeges from him.
+            AddToNameToClientManagerDict(nickname);
 
             while (true)
             {
-                NetworkStream stream = client.GetStream();
+                ReadAndWrite readObj = _reader.Read(nickname); // read data
 
-                byte[] lengthBuffer = new byte[sizeof(int)];
-
-                int offset = 0; // an offset to know where to add the data and stop
-
-                stream.Read(lengthBuffer, 0, sizeof(int));
-
-
-                int ObjectdataLength = BitConverter.ToInt32(lengthBuffer, 0);
-                //create the array for the full objectD
-                byte[] fullObjectBytes = new byte[ObjectdataLength];
-                while (offset < ObjectdataLength)
+                string nameToSendTo = _dstOfMsgManager.GetGroupBySender(_nickName);
+                ConcurrentBag<TcpClient> clients = _groupOfClientManager.GetClientsInGroupOrNull(_nickName);
+                foreach (TcpClient client in clients)
                 {
-                    int numOfBytedRead = stream.Read(fullObjectBytes, offset, ObjectdataLength);
-                    if (numOfBytedRead == 0)
-                    {
-                        Log.Warning("some of the objec's data is missing...");
-                        break;
-                    }
-                    offset += numOfBytedRead;
-                }
-                byte[] idBuffer = new byte[sizeof(int)];
-                for (int i = 0; i < 4; i++)
-                {
-                    idBuffer[i] = fullObjectBytes[i];
-                }
-                //Console.WriteLine("the buffer: " + string.Join(",", fullObjectBytes));
-                int id = BitConverter.ToInt32(idBuffer, 0); // the ID of the class
-                //Console.WriteLine(id );
-                ReadAndWrite myObject = DeserializationHelper.CreateObjectById(id);
-                myObject.Read(fullObjectBytes);
-                ((InterfaceHandler)myObject).CorrectOperationHandler("server");
-
-
-            }
-        }
-        private void StartConversation( TcpClient client)
-        {
-            try
-            {
-                //create the intput thread and the reading thread
-                Thread readingThread = new Thread(() => ReadTheIncomingData(client));
-
-                //run the Reading thread
-
-                //readingThread.Start();
-
-
-                // the message string
-
-                // Loop to send the msg that we got from the input thread while thre is a connection.
-                while (true)
-                {
-
-                    // Get a stream object for reading and writing
-                    stream = client.GetStream();
-
-
-                    if (messageQueue.TryTake(out string message))
-                    {
-                        string messageStr = message;
-
-                        byte[] messageBytes = System.Text.Encoding.ASCII.GetBytes(messageStr);
-
-                        // Send the msg.
-                        stream.Write(messageBytes, 0, messageBytes.Length);
-                    }
+                    //if (client != _theClientConnectedTo)
+                    //{
+                        this._writer.SetClient(client);
+                        _writer.SendData(readObj); // send data
+                    //}
 
                 }
-            }
-            catch (ArgumentNullException e)
-            {
-                Log.Error("ArgumentNullException: {0}", e);
-            }
-            catch (SocketException e)
-            {
-                Log.Error("SocketException: {0}", e);
-            }
-            catch (Exception e)
-            {
-                
-            }
-
-        }
-
-        private void ReadTheIncomingData(TcpClient client)
-        {
-            try
-            {
-                while (true)
-                {
-                    // array to store the response bytes.
-                    Byte[] messageBytesRecieved = new Byte[256];
-
-                    // String to store the response ASCII representation.
-                    string responseData;
-                    int i;
-                    NetworkStream ns = client.GetStream();
-                    // Loop to receive all the data sent by the client.
-                    responseData = String.Empty;
-                    while ((i = ns.Read(messageBytesRecieved, 0, messageBytesRecieved.Length)) != 0)
-                    {
-                        // Read the first batch of the TcpServer response bytes.
-                        responseData = System.Text.Encoding.ASCII.GetString(messageBytesRecieved, 0, i);
-                        Log.Information(responseData);
-
-                    }
-
-                }
-            }
-            catch (ArgumentNullException e)
-            {
-                Console.WriteLine("ArgumentNullException: {0}", e);
-                exceptionQueue.Add(numOfClient);
-            }
-            catch (SocketException e)
-            {
-                Console.WriteLine("SocketException: {0}", e);
-                exceptionQueue.Add(numOfClient);
-            }
-
-            catch (Exception e)
-            {
-                Log.Information("Disconected! from : " + (IPEndPoint)client.Client.RemoteEndPoint); // ip and port
-                exceptionQueue.Add(numOfClient);
             }
         }
     }

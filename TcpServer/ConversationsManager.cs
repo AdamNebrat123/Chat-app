@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Adam_s_TcpServer
 {
-    public class ConversationsManager : IConversationService
+    public class ConversationsManager
     {
         private static object locker = new object();
         private static ConversationsManager _instance;
@@ -36,22 +36,6 @@ namespace Adam_s_TcpServer
                 }
             }
             return _instance;
-        }
-
-        public void AddConversationQueue()
-        {
-            Interlocked.Increment(ref numOfClients); // increment with lock to prevent race condition
-            BlockingCollection<string> queue = new BlockingCollection<string>();
-            dictionaryOfmessageQueue.Add(numOfClients, queue);
-        }
-
-        public void CreateMyTCPserverConversationInstance(TcpClient client)
-        {
-            AddConversationQueue();
-            BlockingCollection<int> exceptionQueue = this.exceptionQueue;
-            BlockingCollection<string> queue = this.dictionaryOfmessageQueue[numOfClients];
-            Thread createConversationThread = new Thread(() => new MyTCPserverConversation(queue, client, numOfClients, exceptionQueue));
-            createConversationThread.Start();
         }
     }
 }

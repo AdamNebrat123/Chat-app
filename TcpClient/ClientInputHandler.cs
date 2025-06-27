@@ -18,18 +18,34 @@ namespace TcpClientApp
         private static ClientInputHandler _instance;
         private string nickName;
         private MsgWriter _writer;
-        private ClientInputHandler(string nickName, MsgWriter writer)
+        private ClientInputHandler( MsgWriter writer)
         {
-            this.nickName = nickName;
             _writer = writer;
         }
         public void StartInputHandler()
         {
             new Thread(InputHandler).Start();
         }
+        public void SendName()
+        {
+            _writer.SetMsgSendStrategy(new SendMyName());
+            ReadAndWrite msgObj = _writer.CreateMsgObj();
+            nickName =  ((SendMyName)msgObj).GetNickName();
+            if (msgObj != null)
+            {
+                _writer.SendData(msgObj);
+            }
+            else
+            {
+                Log.Error("name sending went wrong");
+                nickName = string.Empty;
+            }
+        }
         private void InputHandler()
         {
-                SwitchMsgType();
+            SendName();
+
+            SwitchMsgType();
 
             while (true)
             {
@@ -44,7 +60,7 @@ namespace TcpClientApp
                 }
             }
         }
-        public static ClientInputHandler CreateInstance(string nickName, MsgWriter writer)
+        public static ClientInputHandler CreateInstance(MsgWriter writer)
         {
             // pattern to prevent race conidion between threads that are trying to create the class at the first time:
             // double check _instance == null to prevent the race condition
@@ -54,7 +70,7 @@ namespace TcpClientApp
                 {
                     if (_instance == null)
                     {
-                        _instance = new ClientInputHandler(nickName, writer);
+                        _instance = new ClientInputHandler( writer);
                     }
                 }
             }

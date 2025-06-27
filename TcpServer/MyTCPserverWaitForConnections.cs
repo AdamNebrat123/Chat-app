@@ -23,6 +23,11 @@ namespace Adam_s_TcpServer
             int numOfClients = 0;
             BlockingCollection<int> exceptionQueue = new BlockingCollection<int>();
             Dictionary<int, BlockingCollection<string>> dictionaryOfmessageQueue = new Dictionary<int, BlockingCollection<string>>();
+            DstOfMsgManager dstOfMsgManager = new DstOfMsgManager();
+            NameToClientManager nameToClientManager = new NameToClientManager();
+            GroupOfClientManager groupOfClientManager = new GroupOfClientManager(nameToClientManager);
+
+
             // Set the TcpListener on port 13000.
             Int32 port = 13000;
             IPAddress localAddr = IPAddress.Parse("127.0.0.1");
@@ -43,12 +48,9 @@ namespace Adam_s_TcpServer
                 // get the Ip and Port of the client that connected
                 Log.Information("Connected! from : " + (IPEndPoint)client.Client.RemoteEndPoint); 
                 numOfClients++;
-                BlockingCollection<string> queue = new BlockingCollection<string>();
-                dictionaryOfmessageQueue.Add(numOfClients, queue);
-                Thread createConversationThread = new Thread(() => new MyTCPserverConversation(queue, client, numOfClients, exceptionQueue));
-                createConversationThread.Start();
-
-                
+                MyTCPserverConversation conversation = new MyTCPserverConversation(groupOfClientManager, dstOfMsgManager,
+                                                                nameToClientManager, client, numOfClients, exceptionQueue);
+                conversation.StartReadAndSend("server");
             }
         }
         public static void CreateTheLogger()

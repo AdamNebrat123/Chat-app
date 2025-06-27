@@ -46,10 +46,7 @@ namespace TcpClientApp
             _writer = new MsgWriter(_client);
             _reader = new MsgReader(_client);
 
-            Console.WriteLine("Whats your name?");
-            nickName = Console.ReadLine();
-
-            _clientInputHandler = ClientInputHandler.CreateInstance(nickName, _writer);
+            _clientInputHandler = ClientInputHandler.CreateInstance(_writer);
             _clientInputHandler.StartInputHandler();
             _clientReaderHandler = new ClientReaderHandler(_client);
             _clientReaderHandler.StartReaderHandler(nickName);
