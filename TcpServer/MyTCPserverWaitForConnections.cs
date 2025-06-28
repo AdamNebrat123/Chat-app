@@ -25,7 +25,7 @@ namespace Adam_s_TcpServer
             Dictionary<int, BlockingCollection<string>> dictionaryOfmessageQueue = new Dictionary<int, BlockingCollection<string>>();
             ClientNameToGroupName dstOfMsgManager = new ClientNameToGroupName();
             ClientNameToTcpClientDictionary nameToClientManager = new ClientNameToTcpClientDictionary();
-            GroupsOfClientsDictionary groupOfClientManager = new GroupsOfClientsDictionary(nameToClientManager);
+            GroupsOfClientsDictionary groupOfClientManager = new GroupsOfClientsDictionary();
 
 
             // Set the TcpListener on port 13000.
@@ -60,27 +60,7 @@ namespace Adam_s_TcpServer
             .WriteTo.File("ServerChatLog.txt", rollingInterval: RollingInterval.Infinite, shared: true)
             .CreateLogger();
         }
-        private static void InputHandler(Dictionary<int, BlockingCollection<string>> dictionaryOfmessageQueue)
-        {
-            Log.Information("Welcome to adams's chat **Server**! you can enter messages (type 'exit' to quit): ");
-            while (true)
-            {
-
-                // Wait for user input
-                string input = Console.ReadLine();
-                // Add the input to all of the queues
-                foreach (BlockingCollection<string> value in dictionaryOfmessageQueue.Values)
-                {
-                    value.Add(string.Format("from Server : {0}" , input));
-                }
-
-                // Exit the loop if the user types "exit"
-                if (input.ToLower() == "exit")
-                {
-                    break;
-                }
-            }
-        }
+        
         private static void SearchingForException(Dictionary<int, BlockingCollection<string>> dictionaryOfmessageQueue, BlockingCollection<int> ExceptionQueue)
         {
             while (true) 

@@ -44,31 +44,30 @@ namespace Adam_s_TcpServer
             this._writer = new MsgWriter(_theClientConnectedTo);
         }
 
-        private void SendError(string message)
+        private void SendResponse(string message, TcpClient dstClient)
         {
             ReadAndWrite response = new ServerMsg(message);
-            _writer.SetClient(_theClientConnectedTo);
+            _writer.SetClient(dstClient);
             _writer.SendData(response);
             Log.Information("Sent to {0}: {1}", _nickName, response.ToString());
         }
-
         public bool AddToClientNameToTcpClientDictionary()
         {
-            if (!_groupsOfClientsDictionary.ContainsGroup(_nickName) && _clientNameToTcpClientDictionary.TryAdd(_nickName, _theClientConnectedTo))
+            if (_clientNameToTcpClientDictionary.TryAdd(_nickName, _theClientConnectedTo))
                 return true;
             else
             {
-                SendError("The name is already used. pick different name");
+                SendResponse(_nickName + " is already used. pick different name", _theClientConnectedTo);
                 return false;
             }
         }
-        public bool TryCreateGroup()
+        public bool TryCreateGroup(string groupName)
         {
             if (_groupsOfClientsDictionary.TryCreateGroup(_nickName))
                 return true;
             else
             {
-                SendError("Group name is already used. pick other name");
+                SendResponse(groupName + " - Group/Clinet name is already used. pick other name", _theClientConnectedTo);
                 return false;
             }
         }
@@ -86,7 +85,7 @@ namespace Adam_s_TcpServer
             else
             {
                 // send no such client, pls enter other client name
-                SendError("No such client, pls enter other client name");
+                SendResponse(_nickName + " - No such client, pls enter other client name", _theClientConnectedTo);
             }
         }
         public void SwitchDestination(SwitchPerson readObj)
@@ -100,40 +99,107 @@ namespace Adam_s_TcpServer
                 }
                 else
                 {
-                    Log.Error("Could not switch to this group/client, pls enter other destination");
-                    SendError("Could not switch to this group/client, pls enter other destination");
+                    Log.Warning(dstGroup + " - Could not switch to this group/client, pls enter other destination");
+                    SendResponse(dstGroup + " - Could not switch to this group/client, pls enter other destination", _theClientConnectedTo);
                 }
             }
             else
             {
-                Log.Warning("No such group/client, pls enter other destination");
-                SendError("No such group/client, pls enter other destination");
+                Log.Warning(dstGroup + " - No such group/client, pls enter other destination");
+                SendResponse(dstGroup + " - No such group/client, pls enter other destination", _theClientConnectedTo);
             }
         }
         private void RegisterClient()
         {
-            while (true)
+            try
             {
-                try
+                while (true)
                 {
-                    ReadAndWrite readObj = _reader.Read(); // read data
-                    _nickName = ((SendMyName)readObj).GetNickName();
-                    Log.Information("From {0}: {1}", _nickName, readObj.ToString());
-                    if (AddToClientNameToTcpClientDictionary())
+                    try
                     {
-                        if(TryCreateGroup())
+                        ReadAndWrite readObj = _reader.Read(); // read data
+                        _nickName = ((SendMyName)readObj).GetNickName();
+                        Log.Information("From {0}: {1}", _nickName, readObj.ToString());
+                        if (TryCreateGroup(_nickName))
                         {
-                            SetTalkToYourself();
-                            
-                            return;
+                            if (AddToClientNameToTcpClientDictionary())
+                            {
+                                SetTalkToYourself();
+
+                                return;
+                            }
+                        }
+                    }
+                    catch (InvalidOperationException e)
+                    {
+                        SendResponse("You must enter your name first.", _theClientConnectedTo);
+                    }
+                }
+            }
+            catch (IOException ex)
+            {
+                Log.Warning("IO exception: {0}", ex.Message);
+                if (ex.InnerException is SocketException socketEx)
+                {
+                    Log.Warning("Socket error code: {0}", socketEx.SocketErrorCode);
+                }
+            }
+            catch (SocketException ex)
+            {
+                Log.Warning("Socket exception: {0}, Code: {1}", ex.Message, ex.SocketErrorCode);
+            }
+            catch (ObjectDisposedException ex)
+            {
+                Log.Warning("ObjectDisposedException: socket was closed unexpectedly - {0}", ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Unexpected error: {0}", ex);
+            }
+        }
+        private bool IsClientInGroup(string groupName)
+        {
+            if (_groupsOfClientsDictionary.TryRemoveClientFromGroup(groupName, _theClientConnectedTo))
+            {
+                return true;
+            }
+            return false;
+        }
+        private void RemoveClientFromEveryGroup()
+        {
+            foreach (string groupName in _groupsOfClientsDictionary.GetAllGroupNames())
+            {
+                if (IsClientInGroup(groupName))
+                {
+                    ConcurrentBag<TcpClient> clients = _groupsOfClientsDictionary.GetClientsInGroupOrNull(groupName);
+                    if (clients != null)
+                    {
+                        foreach (TcpClient client in clients)
+                        {
+                            if (client != _theClientConnectedTo)
+                            {
+                                this._writer.SetClient(client);
+                                ReadAndWrite header = new ServerMsg("From: SERVER,");
+                                _writer.SendData(header); // send header
+                                SendResponse(string.Format("REMOVED {0} FROM GROUP {1}", _nickName, groupName), client);
+                            }
                         }
                     }
                 }
-                catch (Exception e)
-                {
-                    SendError("You must enter your name first.");
-                }
             }
+        }
+        private void RemoveClientFromClientNameToTcpClientDictionary()
+        {
+            if (_clientNameToTcpClientDictionary.TryRemove(_nickName))
+                Log.Information("Successfully removed {0} from ClientNameToTcpClientDictionary." , _nickName);
+            else
+                Log.Error("{0} IS NOT IN ClientNameToTcpClientDictionary?!?!?!" , _nickName);
+
+        }
+        public void UnregisterClient()
+        {
+            RemoveClientFromEveryGroup();
+            RemoveClientFromClientNameToTcpClientDictionary();
         }
         public void StartReadAndSend()
         {
@@ -144,30 +210,71 @@ namespace Adam_s_TcpServer
             // after the client connection adds *SUCCESSFULLY* himself to the dictionaries,
             // only then we can can messeges from him.
             RegisterClient();
-
-            while (true)
+            try
             {
-                ReadAndWrite readObj = _reader.Read(); // read data
-                if (readObj is SwitchPerson)
+                while (true)
                 {
-                    SwitchDestination( (SwitchPerson)readObj );
-                }
-                else
-                {
-                    string groupDst = _clientNameToGroupNameDictionary.GetGroupBySender(_nickName);
-                    Log.Information("Origin: {0}, sent to {1}: {2}", _nickName, groupDst, readObj.ToString());
-                    ConcurrentBag<TcpClient> clients = _groupsOfClientsDictionary.GetClientsInGroupOrNull(groupDst);
-                    foreach (TcpClient client in clients)
+                    ReadAndWrite readObj = _reader.Read(); // read data
+                    if (readObj is SwitchPerson)
                     {
-                        if (client != _theClientConnectedTo)
-                        {
-                            this._writer.SetClient(client);
-                            ReadAndWrite header = new ServerMsg("From: " + _nickName + ",");
-                            _writer.SendData(header); // send header
-                            _writer.SendData(readObj); // send data
-                        }
-
+                        SwitchDestination((SwitchPerson)readObj);
                     }
+                    else
+                    {
+                        string groupDst = _clientNameToGroupNameDictionary.GetGroupBySender(_nickName);
+                        Log.Information("Origin: {0}, sent to {1}: {2}", _nickName, groupDst, readObj.ToString());
+                        ConcurrentBag<TcpClient> clients = _groupsOfClientsDictionary.GetClientsInGroupOrNull(groupDst);
+                        if (clients != null)
+                        {
+                            foreach (TcpClient client in clients)
+                            {
+                                if (client != _theClientConnectedTo)
+                                {
+                                    this._writer.SetClient(client);
+                                    ReadAndWrite header = new ServerMsg("From: " + _nickName + ",");
+                                    _writer.SendData(header); // send header
+                                    _writer.SendData(readObj); // send data
+                                }
+
+                            }
+                        }
+                        else
+                            SendResponse(groupDst + " - No such group/client, pls enter other destination", _theClientConnectedTo);
+                    }
+                }
+            }
+            catch (IOException ex)
+            {
+
+            }
+            catch (SocketException ex)
+            {
+                
+            }
+            catch (ObjectDisposedException ex)
+            {
+                
+            }
+            catch (Exception ex)
+            {
+                
+            }
+            finally
+            {
+
+                //=================
+                UnregisterClient();
+                //=================
+
+
+                try
+                {
+                    Log.Information("Closing client connection for: {0}", _nickName);
+                    _theClientConnectedTo?.Close();
+                }
+                catch (Exception closeEx)
+                {
+                    Log.Error("Error while closing socket: {0}", closeEx.Message);
                 }
             }
         }

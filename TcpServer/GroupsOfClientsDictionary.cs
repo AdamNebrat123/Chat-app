@@ -12,11 +12,9 @@ namespace Adam_s_TcpServer
     {
         private readonly ConcurrentDictionary<string, ConcurrentBag<TcpClient>> _groups
             = new ConcurrentDictionary<string, ConcurrentBag<TcpClient>>();
-        private ClientNameToTcpClientDictionary _nameToClientManager;
 
-        public GroupsOfClientsDictionary(ClientNameToTcpClientDictionary nameToClientManager)
+        public GroupsOfClientsDictionary()
         {
-            _nameToClientManager = nameToClientManager;
         }
 
         public bool TryCreateGroup(string groupName)
@@ -50,19 +48,26 @@ namespace Adam_s_TcpServer
 
 
         // Remove a client from a group by client name
-        public bool TryRemoveClientFromGroup(string groupName, string clientName)
+        public bool TryRemoveClientFromGroup(string groupName, TcpClient targetClient)
         {
             if (!_groups.TryGetValue(groupName, out var clients))
                 return false;
 
-            // Get the TcpClient object from the name-to-client manager
-            TcpClient targetClient = _nameToClientManager.GetClientOrNull(clientName);
-            if (targetClient == null)
+            // if the client dont in the group, return false
+            bool clientExists = clients.Contains(targetClient);
+            if (!clientExists)
                 return false;
-
             // ConcurrentBag does not support removal, so create a new bag without the client
             var newBag = new ConcurrentBag<TcpClient>(clients.Where(c => c != targetClient));
-            _groups[groupName] = newBag;
+
+            // if the group is empty i will delete the group
+            bool isEmpty = !newBag.Any();
+            if (isEmpty)
+            {
+                TryRemoveGroup(groupName, out clients);
+            }
+            else
+                _groups[groupName] = newBag;
             return true;
         }
 
