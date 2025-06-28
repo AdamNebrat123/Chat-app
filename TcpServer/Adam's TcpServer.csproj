@@ -79,9 +79,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClientNameToGroupName.cs" />
-    <Compile Include="ExceptionHandler.cs" />
     <Compile Include="GroupsOfClientsDictionary.cs" />
-    <Compile Include="ConversationsManager.cs" />
     <Compile Include="ClientNameToTcpClientDictionary.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MyTCPserverConversation.cs" />

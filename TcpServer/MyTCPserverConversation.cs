@@ -63,7 +63,7 @@ namespace Adam_s_TcpServer
         }
         public bool TryCreateGroup(string groupName)
         {
-            if (_groupsOfClientsDictionary.TryCreateGroup(_nickName))
+            if (_groupsOfClientsDictionary.TryCreateGroup(groupName))
                 return true;
             else
             {
@@ -129,6 +129,11 @@ namespace Adam_s_TcpServer
                                 return;
                             }
                         }
+                        else
+                        {
+                            _theClientConnectedTo?.Close();
+                            return;
+                        }
                     }
                     catch (InvalidOperationException e)
                     {
@@ -138,23 +143,19 @@ namespace Adam_s_TcpServer
             }
             catch (IOException ex)
             {
-                Log.Warning("IO exception: {0}", ex.Message);
-                if (ex.InnerException is SocketException socketEx)
-                {
-                    Log.Warning("Socket error code: {0}", socketEx.SocketErrorCode);
-                }
+
             }
             catch (SocketException ex)
             {
-                Log.Warning("Socket exception: {0}, Code: {1}", ex.Message, ex.SocketErrorCode);
+
             }
             catch (ObjectDisposedException ex)
             {
-                Log.Warning("ObjectDisposedException: socket was closed unexpectedly - {0}", ex.Message);
+
             }
             catch (Exception ex)
             {
-                Log.Error("Unexpected error: {0}", ex);
+
             }
         }
         private bool IsClientInGroup(string groupName)
@@ -179,9 +180,8 @@ namespace Adam_s_TcpServer
                             if (client != _theClientConnectedTo)
                             {
                                 this._writer.SetClient(client);
-                                ReadAndWrite header = new ServerMsg("From: SERVER,");
-                                _writer.SendData(header); // send header
-                                SendResponse(string.Format("REMOVED {0} FROM GROUP {1}", _nickName, groupName), client);
+                                string response = string.Format("===============From: *SERVER*      {0} was REMOVED from the group: {1}===============", _nickName, groupName);
+                                SendResponse(response, client);
                             }
                         }
                     }
@@ -198,9 +198,54 @@ namespace Adam_s_TcpServer
         }
         public void UnregisterClient()
         {
-            RemoveClientFromEveryGroup();
-            RemoveClientFromClientNameToTcpClientDictionary();
+            try
+            {
+                RemoveClientFromEveryGroup();
+                RemoveClientFromClientNameToTcpClientDictionary();
+            }
+            catch (Exception e)
+            {
+            }
         }
+        public bool AddClientToGroup(string groupName, TcpClient client)
+        {
+            return _groupsOfClientsDictionary.TryAddClientToGroup(groupName, client);
+        }
+        public void CreateNewGroupWithParticipants(string groupName, List<string> ExpectedParticipants)
+        {
+            List<string> addedParticipants = new List<string>();
+            List<string> notAddedParticipants = new List<string>();
+            if (TryCreateGroup(groupName))
+            {
+                foreach (string participant in ExpectedParticipants)
+                {
+                    TcpClient client = _clientNameToTcpClientDictionary.GetClientOrNull(participant);
+                    if (client == null || !AddClientToGroup(groupName, client))
+                    {
+                        notAddedParticipants.Add(participant);
+                    }
+                    else
+                    {
+                        addedParticipants.Add(participant);
+                        SendResponse(string.Format("From: *SERVER*      {0} Added you to the group: {1}" , _nickName, groupName), client);
+                    }
+                }
+                if(addedParticipants.Count == 0)
+                {
+                    _groupsOfClientsDictionary.TryRemoveGroup(groupName, out var _);
+                }
+                else
+                {
+                    string response = "Created: \n";
+                    response += "Group name: " + groupName + "\n";
+                    response += "participants: " + string.Join(",", addedParticipants) + "\n";
+                    response += "Could NOT add: " + string.Join(",", notAddedParticipants) + "\n";
+                    SendResponse(response, _theClientConnectedTo);
+                }
+            }
+        }
+
+
         public void StartReadAndSend()
         {
             new Thread(() => ReadAndSend()).Start();
@@ -218,6 +263,12 @@ namespace Adam_s_TcpServer
                     if (readObj is SwitchPerson)
                     {
                         SwitchDestination((SwitchPerson)readObj);
+                    }
+                    else if (readObj is CreateGroup)
+                    {
+                        string groupName = ((CreateGroup)readObj).GetGroupName();
+                        List<string> expectedParticipants = ((CreateGroup)readObj).GetParticipants();
+                        CreateNewGroupWithParticipants(groupName, expectedParticipants);
                     }
                     else
                     {

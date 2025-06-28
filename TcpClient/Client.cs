@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Serilog;
 using myClass;
 
-using myClass;
 using System.Xml.Linq;
 
 namespace TcpClientApp
@@ -32,7 +31,7 @@ namespace TcpClientApp
         public static void Main()
         {
             CreateTheLogger();
-
+            Opening();
 
             String serverIP = "127.0.0.1";
             Int32 port = 13000;
@@ -53,6 +52,7 @@ namespace TcpClientApp
 
 
         }
+        
         public static void CreateTheLogger()
         {
             Log.Logger = new LoggerConfiguration()
@@ -60,7 +60,46 @@ namespace TcpClientApp
             .WriteTo.File("ClientChatLog.txt", rollingInterval: RollingInterval.Infinite, shared: true)
             .CreateLogger();
         }
-        
-        
+
+        public static void Opening()
+        {
+            Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine("WELCOME TO ADAM'S CHAT!");
+            Console.ResetColor();
+            Console.WriteLine();
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("========== MENU ==========");
+            Console.ResetColor();
+
+            var options = new (int id, string title, string description)[]
+            {
+        (1, "Send simple string message", "Allows you to enter a short text message to send."),
+        (2, "Create Student message", "Prompts for a student's name and age, and sends it."),
+        (3, "Create Family message", "Asks for father's and mother's names, and sends family data."),
+        (4, "Send an Image", "Lets you choose an image file path and sends the image."),
+        (5, "Switch person (change recipient)", "Change the nickname of the user you want to talk to."),
+        (6, "Send my name", "Send your nickname to identify yourself."),
+        (7, "Create a Group", "Create a new group by entering a name and list of participants."),
+            };
+
+            foreach (var (id, title, description) in options)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.Write($"{id} - ");
+                Console.ResetColor();
+                Console.WriteLine(title);
+
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"    > {description}");
+                Console.ResetColor();
+            }
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("==========================");
+            Console.ResetColor();
+            Console.WriteLine();
+        }
     }
 }

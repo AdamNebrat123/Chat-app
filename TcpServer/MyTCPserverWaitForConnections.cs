@@ -35,14 +35,11 @@ namespace Adam_s_TcpServer
             // TcpListener server = new TcpListener(port);
             TcpListener server = new TcpListener(localAddr, port);
 
-            // Start listening for client requests.
             server.Start();
-            //////////////////////////
             while (true)
             {
                 Log.Information("Waiting for a connection... ");
                 // Perform a blocking call to accept requests.
-                // You could also use server.AcceptSocket() here.
                 TcpClient client = server.AcceptTcpClient();
 
                 // get the Ip and Port of the client that connected
@@ -60,20 +57,5 @@ namespace Adam_s_TcpServer
             .WriteTo.File("ServerChatLog.txt", rollingInterval: RollingInterval.Infinite, shared: true)
             .CreateLogger();
         }
-        
-        private static void SearchingForException(Dictionary<int, BlockingCollection<string>> dictionaryOfmessageQueue, BlockingCollection<int> ExceptionQueue)
-        {
-            while (true) 
-            {
-                
-                if(ExceptionQueue.TryTake(out int keyToRemove))
-                {
-                    dictionaryOfmessageQueue.Remove(keyToRemove);
-                }
-
-                
-            }
-        }
-
     }
 }

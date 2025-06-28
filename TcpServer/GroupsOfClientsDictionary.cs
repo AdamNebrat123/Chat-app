@@ -35,9 +35,17 @@ namespace Adam_s_TcpServer
         {
             if (_groups.TryGetValue(groupName, out var clients))
             {
-                clients.Add(client);
+                // Inefficient but functional...  check manually if client already exists
+                bool alreadyExists = clients.Any(existingClient => existingClient == client);
+
+                if (!alreadyExists)
+                {
+                    clients.Add(client);
+                }
+
                 return true;
             }
+
             return false;
         }
         public bool ContainsGroup(string groupName)
