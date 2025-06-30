@@ -100,6 +100,11 @@ namespace TcpClientApp
             Console.WriteLine("==========================");
             Console.ResetColor();
             Console.WriteLine();
+            Console.Write("to change the type of the message type exactly: ");
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("/switch");
+            Console.ResetColor();
+            Console.WriteLine();
         }
     }
 }
